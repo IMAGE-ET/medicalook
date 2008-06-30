@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # medicalook.py: entry point of Medicalook
-# author: Jesse Woo <jessewoo at gmail.com>
+# author: Wu Zhe <jessewoo at gmail.com>
 # license: GPL
 
 import sys, os
@@ -18,7 +18,7 @@ def main():
         usage()
     for o, a in options:
         if o in ('-h', '--help'):
-            usage(False)
+            usage(err=False)
         elif o in ('-v', '--version'):
             version()
 
@@ -33,16 +33,16 @@ def usage(err=True):
         stream = sys.stdout
 
     print >> stream, """Usage: %s [OPTIONS]
+
 Valid OPTIONS:
 -h, --help:    shows this message and exits
--v, --version: show version
-""" % os.path.basename(sys.argv[0])
-    sys.exit(err)
+-v, --version: show version""" % os.path.basename(sys.argv[0])
+    sys.exit()
 
 
 def version():
     print common.__version__
-
+    sys.exit()
 
 if __name__ == '__main__':
     main()

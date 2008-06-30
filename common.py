@@ -4,6 +4,8 @@
 # author: Jesse Woo <jessewoo at gmail.com>
 # license: GPL
 
+import os
+
 __version__ = '0.1'
 
 if os.path.expanduser('~') != '~':
@@ -17,5 +19,3 @@ else:
     config_file = os.path.join(confdir, 'config')
 
 config = None # ConfigPaser instance used to load/store options
-
-
