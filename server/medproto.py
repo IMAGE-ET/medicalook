@@ -9,6 +9,9 @@ from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 from twisted.internet.defer import DeferredList
 
+import os
+
+import common
 import db
 
 
@@ -27,8 +30,8 @@ class MedicalookServerProtocol(LineReceiver):
 
     1. List querying:
          c --> s: 1#*:John:m:*:*:*#limit#offset
-         s --> c: 1#total#count to transfer
-         s --> c: 123231231:John:m:1934-2-3:head::MR
+         s --> c: 1#total#number of rows to transfer
+         s --> c: 1#123231231:John:m:1934-2-3:head::MR
          s --> c: 1#234567899:John:m:1945-5-8:Spline:description:CT
          ...
 
@@ -92,7 +95,10 @@ class MedicalookServerProtocol(LineReceiver):
                 if item != '*':
                     where += " %s = '%s' AND" % \
                     (self.factory.header[i], item)
-            where = where[:-4] # get rid of the last ' AND'
+
+            # get rid of the last ' AND'
+            where = where[:-4]
+
             where_limit = where + \
                           ' LIMIT %s OFFSET %s' % (limit, offset)
 
@@ -108,8 +114,25 @@ class MedicalookServerProtocol(LineReceiver):
         except ValueError:
             self._error('image querying: image id incorrect')
         else:
+            def send_file(filename):
+                filepath = os.path.join(common.file_dir, filename)
+                try:
+                    outfile = open(filepath, 'rb')
+                except IOError:
+                    print "no such file"
+                    return
+
+                def transfer_completed():
+                    # TODO: ##################################
+
+                sender = FileSender()
+                sender.CHUNK_SIZE = 2 ** 16
+                d = sender.beginFileTransfer(outfile, self.transport)
+                d.addCallback(transfer_completed)
+
             where = "id = %s" % image_id
-            #TODO: find the image and send the image to client
+            d_filename = db.get_field_where('filename', where)
+            d_filename.addCallback(send_file)
 
     def _import_querying_handler(self, line):
         try:
