@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# common.py: global variables
-# author: Jesse Woo <jessewoo at gmail.com>
+# common.py: global client configuration
+# author: Wu Zhe <jessewoo at gmail.com>
 # license: GPL
 
 import os
