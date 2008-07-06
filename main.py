@@ -23,7 +23,7 @@ class Medicalook(wx.App):
         wx.App.__init__(self, 0)
 
     def OnInit(self):
-        #self.init_preferences()
+        #self.init_preferences()o
         #self.viewer_frame = viewer.DicomViewerFrame(None, '')
         #self.viewer = viewer.DicomViewer()
         self.main_frame = MedicalookBrowser()
@@ -92,7 +92,7 @@ class MedicalookBrowser(wx.Frame):
         self.Bind(wx.EVT_MENU, handler, menu_item)
 
     def _menu_data(self):
-        return [('&File', 
+        return [('&File',
                  (('&Import from',
                    (('&Files', 'Import from files',
                     self._on_import_file),
@@ -112,27 +112,10 @@ class MedicalookBrowser(wx.Frame):
         dlg = wx.FileDialog(self, 'Choose dicom files', os.getcwd(),
                             '', wildcard,
                             wx.OPEN | wx.MULTIPLE | wx.CHANGE_DIR)
-        data_list = []
         if dlg.ShowModal() == wx.ID_OK:
-            from server.dicomparser import DicomParser
-            parser = DicomParser()
-            for path in dlg.GetPaths():
-                parser.set_file(path)
-                parser.parse()
-                data_list.append(parser.get_data())
+            paths = dlg.GetPaths()
         dlg.Destroy()
-
-        #
-        # test
-        #
-        server.db.cur.executemany("""INSERT INTO
-        images(patient_name, patient_sex, patient_dob,
-        body_part, description, modality, study_date, station) VALUES
-        (%(patient_name)s, %(patient_sex)s, DATE %(patient_dob)s,
-        %(body_part)s, %(description)s, %(modality)s,
-        DATE %(study_date)s, %(station)s)""", data_list)
-        server.db.conn.commit()
-        self._refresh()
+        self._import_query(paths)
 
     def _on_import_dir(self, evt):
         dlg = wx.DirDialog(self, "Choose a directory:",
@@ -140,6 +123,7 @@ class MedicalookBrowser(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
         dlg.Destroy()
+        self.import_query(path)
 
     def _on_refresh(self, evt):
         self._refresh()
@@ -152,8 +136,17 @@ class MedicalookBrowser(wx.Frame):
 
     def _refresh(self):
         self.list.refresh()
-        
-        
+
+    def _list_query(self):
+        pass
+
+    def _image_query(self):
+        pass
+
+    def _import_query(self, path):
+        pass
+        # TODO: gengerate a sequence of lines for protocol
+
 def main():
     os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
     app = Medicalook()

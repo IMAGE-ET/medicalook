@@ -6,4 +6,4 @@
 
 
 columns = ["ID", "Patient name", "Sex",  "DOB", "Body part", "Description",
-           "Modality", "Study date", "Station", "Import time", "path"]
+           "Modality", "Study date", "Station", "Import time", "filename"]

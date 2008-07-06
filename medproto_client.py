@@ -5,11 +5,19 @@
 # license: GPL
 
 from twisted.internet.protocol import ReconnectingClientFactory
-from twisted.protocols.basic import LineReceiver
+from twisted.protocols.basic import LineReceiver, FileSender
 from twisted.inetnet import reactor
 
+import common
 
 class MedicalookClientProtocol(LineReceiver):
+
+    def __init__(self):
+        pass
+
+    def _error(self, msg):
+        line = '0#' + msg
+        self.sendLine(Line)
 
     def lineReceived(self, line):
         pass

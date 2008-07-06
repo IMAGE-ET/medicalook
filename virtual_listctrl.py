@@ -9,7 +9,7 @@ import wx
 import sys, glob, random
 
 import server.db
-from metadata import columns
+from server.metadata import columns
 
 
 class DataSource:

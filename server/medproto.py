@@ -5,8 +5,7 @@
 # license: GPL
 
 from twisted.internet.protocol import Factory
-from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
+from twisted.protocols.basic import LineReceiver, FileSender
 from twisted.internet.defer import DeferredList
 
 import os
@@ -41,9 +40,9 @@ class MedicalookServerProtocol(LineReceiver):
 
     3. Import querying:
          c --> s: 3#the number of images to transfer
-         c --> s: 3#1:filesize
+         c --> s: 3#filesize:crc
          c ==> s: image 1
-         c --> s: 3#2:filesize
+         c --> s: 3#filesize:crc
          c ==> s: image 2
          ...
          s --> c: 3#assigned ids of the imported images seperated by
@@ -55,8 +54,12 @@ class MedicalookServerProtocol(LineReceiver):
     """
 
     def __init__(self):
+        self.current_import_file = None
+        self.import_id_list = []
         self.import_remain = 0
         self.filesize_remain = 0
+        self.crc_src = 0
+        self.crc = 0
 
     def _error(self, msg):
         line = '0#' + msg
@@ -148,20 +151,58 @@ class MedicalookServerProtocol(LineReceiver):
                 how_many = int(line)
             except ValueError:
                 self._error('import querying: expect an integer')
+                return
             else:
-                self.import_remaining = how_many
+                self.import_remain = how_many
         else:
-            count, filesize = fields
+            try:
+                filesize, self.crc_src = map(int, fields)
+            except ValueError:
+                self._error('count, filesize expect a integer')
+                return
 
-            #TODO: prepare to receive a series of images
+            if self.import_remain <= 0:
+                self._error('import count exceeds total')
+                return
+            else:
+                name = uuid.uuid4()
+                path = os.path.join(common.file_dir, name)
+                self.current_import_file = open(path, 'wb')
+                self.current_import_name = name
+                self.filesize_remain = filesize
+                self.setRawMode()
 
-    def rawDataReceived(self):
-        self.setLineMode()
+    def _import_completed(self):
+        # return a filename list to client
+        pass
+
+    def rawDataReceived(self, data):
+        self.remain -= len(data)
+        self.crc = crc32(data, self.crc)
+        self.current_import_file.write(data)
+        if self.filesize_remain == 0:
+            self.import_remain -= 1
+            self.current_import_file.close()
+            if self.crc == self.crc_src:
+                self.crc = 0
+                import_th = FileImporter(self.current_import_name)
+                import_th.start()
+                import_th.join()
+                # TODO: http://artfulcode.nfshost.com/files/multi-threading-in-python.html
+            else:
+                os.remove(os.path.join(common.file_dir,
+                                       self.current_import_name))
+                self._error('crc dismatch')
+            self.setLineMode()
+            if self.import_remain == 0:
+                self._import_completed()
 
     def connectionMade(self):
+        LineReceiver.connectionMade(self)
         self.factory.clients.append(self)
 
     def connectionLost(self, reason):
+        LineReceiver.connectionLost(self, reason)
         self.factory.clients.remove(self)
 
 
