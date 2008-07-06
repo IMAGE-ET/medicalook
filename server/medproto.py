@@ -41,7 +41,9 @@ class MedicalookServerProtocol(LineReceiver):
 
     3. Import querying:
          c --> s: 3#the number of images to transfer
+         c --> s: 3#1:filesize
          c ==> s: image 1
+         c --> s: 3#2:filesize
          c ==> s: image 2
          ...
          s --> c: 3#assigned ids of the imported images seperated by
@@ -51,6 +53,10 @@ class MedicalookServerProtocol(LineReceiver):
 
     If any received message is of unknown format, send '0#message'
     """
+
+    def __init__(self):
+        self.import_remain = 0
+        self.filesize_remain = 0
 
     def _error(self, msg):
         line = '0#' + msg
@@ -122,8 +128,8 @@ class MedicalookServerProtocol(LineReceiver):
                     print "no such file"
                     return
 
-                def transfer_completed():
-                    # TODO: ##################################
+                def transfer_completed(lastsent):
+                    outfile.close()
 
                 sender = FileSender()
                 sender.CHUNK_SIZE = 2 ** 16
@@ -135,12 +141,18 @@ class MedicalookServerProtocol(LineReceiver):
             d_filename.addCallback(send_file)
 
     def _import_querying_handler(self, line):
-        try:
-            how_many = int(line)
-        except ValueError:
-            self._error('import querying: expect an integer')
+        fields = line.split(':')
+
+        if len(fields) == 1:
+            try:
+                how_many = int(line)
+            except ValueError:
+                self._error('import querying: expect an integer')
+            else:
+                self.import_remaining = how_many
         else:
-            pass
+            count, filesize = fields
+
             #TODO: prepare to receive a series of images
 
     def rawDataReceived(self):
