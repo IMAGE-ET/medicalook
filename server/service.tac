@@ -6,10 +6,12 @@
 
 
 from twisted.application import internet, service
+
 from medproto import MedicalookServerFactory
+from metadata import columns
+
 
 def get_medicalook_service():
-    from metadata import columns
     port = 5213
     f = MedicalookServerFactory(columns)
     return internet.TCPServer(port, f)

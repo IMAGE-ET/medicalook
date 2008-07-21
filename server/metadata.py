@@ -5,5 +5,20 @@
 # license: GPL
 
 
-columns = ["ID", "Patient name", "Sex",  "DOB", "Body part", "Description",
-           "Modality", "Study date", "Station", "Import time", "filename"]
+headers = ["ID", "Patient name", "Sex",  "DOB", "Body part", "Description",
+           "Modality", "Study date", "Station", "Import time", "File name"]
+columns = ["id", "patient_name", "patient_sex",  "patient_dob", "body_part", "description",
+           "modality", "study_date", "station", "created", "filename"]
+
+connector = {"id": "=",
+             "patient_name": "~*",
+             "patient_sex": "=",
+             "patient_dob": "=",
+             "body_part": "~*",
+             "description": "~*",
+             "modality": "=",
+             "study_date": "=",
+             "station": "~*",
+             "created": "=",
+             "filename": "~*"}
+

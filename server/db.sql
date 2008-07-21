@@ -10,5 +10,5 @@ CREATE TABLE images (
     study_date date NOT NULL default (date '1900-01-01'),
     station character varying (255) NOT NULL default '',
     created timestamp NOT NULL default current_timestamp,
-    filename text NOT NULL default ''
+    filename character (40) NOT NULL default ''
 );

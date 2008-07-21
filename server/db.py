@@ -23,10 +23,15 @@ def get_count():
     return dbpool.runQuery("SELECT count(*) FROM images")
 
 def get_all_where(where):
-    return dbpool.runQuery("SELECT * FROM images WHERE %s" % where)
+    print "SELECT * FROM images %s" % where
+    return dbpool.runQuery("SELECT * FROM images %s" % where)
 
 def get_count_where(where):
-    return dbpool.runQuery("SELECT count(*) FROM images WHERE %s" % where)
+    print "SELECT count(*) FROM images %s" % where
+    return dbpool.runQuery("SELECT count(*) FROM images %s" % where)
 
 def get_field_where(field, where):
-    return dbpool.runQuery("SELECT %s FROM images WHERE %s" % (field, where))
+    return dbpool.runQuery("SELECT %s FROM images %s" % (field, where))
+
+def run_op(sql):
+    return dbpool.runOperation(sql)
