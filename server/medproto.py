@@ -43,7 +43,7 @@ class MedicalookServerProtocol(LineReceiver):
     3. Import querying:
          c --> s: 3#filesize|crc|ext
          c ==> s: image 1
-         s --> c: 3#assigned id (not implementated)
+         s --> c: 3#assigned id (currently not implemented)
 
     '-->' denotes string mode, '==>' denotes rawdata mode.
 
@@ -138,6 +138,7 @@ class MedicalookServerProtocol(LineReceiver):
             def send_file(result):
                 filename = result[0][0].strip()
                 filepath = os.path.join(common.file_dir, filename)
+                print "send file ", filepath
                 try:
                     outfile = open(filepath, 'rb')
                 except IOError:

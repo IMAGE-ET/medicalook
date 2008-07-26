@@ -34,7 +34,7 @@ class DicomParser:
                      'station': dicom_io.GetManufacturer
                      }
 
-        data = dict()
+        data = {}
         for name in data_pair.keys():
             st = ' ' * 255
             data_pair[name](st)
