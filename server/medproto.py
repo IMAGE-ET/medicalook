@@ -11,6 +11,7 @@ from twisted.internet import threads
 
 import os
 import uuid
+import shutil, glob
 from zlib import crc32
 
 import common
@@ -56,8 +57,11 @@ class MedicalookServerProtocol(LineReceiver):
         self.filesize_remain = 0
         self.crc_src = 0
         self.crc = 0
+        self.rar = False
 
         self.excess_flag = False
+        self.excess_no_linebreak_flag = False
+        self.excess_no_linebreak_data = ''
 
     def _error(self, msg):
         line = '0#' + msg
@@ -108,6 +112,14 @@ class MedicalookServerProtocol(LineReceiver):
                             DATE '%s' AND DATE '%s') AND" % tuple(dates)
                         elif len(dates) == 1:
                             where += " study_date = DATE '%s' AND" % item
+                    elif self.factory.columns[i] == 'patient_dob':
+                        year = " EXTRACT(YEAR FROM AGE(patient_dob))"
+                        if '~' in item:
+                            f, t = map(int, item.split('~'))
+                            s = year + " BETWEEN %d and %d" % (f, t)
+                        else:
+                            s = year + " = %d" % int(item)
+                        where += (s + ' AND')
                     else:
                         con = connector[self.factory.columns[i]]
                         where += " %s %s '%s' AND" % \
@@ -119,7 +131,7 @@ class MedicalookServerProtocol(LineReceiver):
                 # get rid of the last ' AND'
                 where = where[:-4]
 
-
+            print "WHERE:", where
             where_limit = where + \
                           ' LIMIT %s OFFSET %s' % (limit, offset)
             d_total = db.get_count_where(where)
@@ -174,6 +186,14 @@ class MedicalookServerProtocol(LineReceiver):
             self._error('count, filesize expect a integer')
             return
 
+        if (ext == 'rar'):
+            self.rar = True
+        else:
+            self.rar = False
+            if not (ext == 'dcm' or ext == 'DCM' or \
+                    ext == 'acr' or ext == "ACR"):
+                return
+
         name = uuid.uuid4().get_hex() + '.' + ext
         path = os.path.join(common.file_dir, name)
         self.current_import_file = open(path, 'wb')
@@ -189,14 +209,59 @@ class MedicalookServerProtocol(LineReceiver):
     def _append_id(self, res):
         pass
 
+    def _parse(self, filename):
+        d = threads.deferToThread(import_thread.parse_file, filename)
+        d.addCallback(import_thread.insert_data)
+
+    def _parse_many(self, a):
+        # remove rar file
+        os.chdir(common.file_dir)
+        files = glob.glob('*.rar')
+        for f in files:
+            os.remove(f)
+
+        # parse each dicom file
+        tmp_dir = os.path.join(common.file_dir, 'tmp')
+        #files = glob.glob('%s/*.DCM' % tmp_dir)
+        files = glob.glob('%s/*' % tmp_dir)
+        for f in files:
+            name = uuid.uuid4().get_hex() + '.dcm'
+            shutil.move(f, os.path.join(common.file_dir, name))
+            self._parse(name)
+
+    def _extract(self, filename):
+        try:
+            path = os.path.join(common.file_dir, filename)
+            tmp_dir = os.path.join(common.file_dir, 'tmp')
+            if not os.path.exists(tmp_dir):
+                try: os.mkdir(tmp_dir)
+                except (IOError, OSError): pass # this is not fatal
+            os.chdir(tmp_dir)
+            command = "rar e %s" % path
+            d = threads.deferToThread(os.system, command)
+            d.addCallback(self._parse_many)
+        except:
+            return
+
     def rawDataReceived(self, data):
-        if len(data) > self.filesize_remain:
+        # this function contains a huge bug, fix soon
+        if self.excess_no_linebreak_flag:
+            data = self.excess_no_linebreak_data + data
+            self.excess_no_linebreak_flag = False
+
+        if (len(data) - len(self.excess_no_linebreak_data)) > \
+               self.filesize_remain:
             self.excess_flag = True
             excess = data[self.filesize_remain:]
             data = data[:self.filesize_remain]
-            pre, post = excess.split('\r\n', 1)
-            excess_line = pre
-            excess_data = post
+            parts = excess.split('\r\n', 1)
+            if len(parts) == 2:
+                pre, post = parts
+                excess_line = pre
+                excess_data = post
+            else:
+                self.excess_no_linebreak_flag = True
+                self.excess_no_likebreak_data = excess
 
         self.filesize_remain -= len(data)
         self.crc = crc32(data, self.crc)
@@ -206,9 +271,10 @@ class MedicalookServerProtocol(LineReceiver):
             self.current_import_file.close()
             if self.crc == self.crc_src:
                 self.crc = 0
-                d = threads.deferToThread(import_thread.parse_file,
-                                          self.current_import_name)
-                d.addCallback(import_thread.insert_data)
+                if self.rar:
+                    self._extract(self.current_import_name)
+                else:
+                    self._parse(self.current_import_name)
             else:
                 self.import_total_files -= 1
                 os.remove(os.path.join(common.file_dir,
@@ -217,7 +283,7 @@ class MedicalookServerProtocol(LineReceiver):
                 # TODO: resend request
             self.setLineMode()
 
-            if self.excess_flag:
+            if self.excess_flag and not self.excess_no_linebreak_flag:
                 self.excess_flag = False
                 if excess_line:
                     self.lineReceived(excess_line)

@@ -22,7 +22,10 @@ class DicomParser:
         dicom_io = itkGDCMImageIO_New()
         reader.SetImageIO(dicom_io.GetPointer())
         reader.SetFileName(self.dicom_file)
-        reader.Update()
+        try:
+            reader.Update()
+        except:
+            print "parse error: UPDATE error"
 
         data_pair = {'patient_name': dicom_io.GetPatientName,
                      'patient_sex':dicom_io.GetPatientSex,
@@ -37,7 +40,10 @@ class DicomParser:
         data = {}
         for name in data_pair.keys():
             st = ' ' * 255
-            data_pair[name](st)
+            try:
+                data_pair[name](st)
+            except:
+                print "parse error:", name
             st = st.strip()
             if st.endswith('\x00'):
                 st = st[:-1]
