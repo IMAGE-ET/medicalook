@@ -1,0 +1,5 @@
+Medicalook is a cross-platform client/server for sharing dicom
+files. It need wxpython, python-insighttoolkit, twisted and
+postgresql to run.
+
+Author: Wu Zhe <wu@madk.org>
